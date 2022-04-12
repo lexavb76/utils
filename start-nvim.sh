@@ -11,7 +11,8 @@ function install() {
     echo "Your current revision is: $cur_ver"
     echo '****************'
     read -p "Choose release: " rev
-    [ -n "$rev" ] && git checkout $rev
+    [ -n "$rev" ] && git checkout $rev || exit_ 1
+    git pull
     read -p "Reinstalling your nvim. Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit_ 1
     uninstall
     #make CMAKE_BUILD_TYPE=RelWithDebInfo USE_BUNDLED=OFF && \
@@ -27,6 +28,7 @@ function install() {
 function uninstall() {
     sudo rm  -v /usr/local/bin/nvim
     sudo rm -rv /usr/local/share/nvim/
+    sudo rm -rf build
 }
 
 function exit_() {
@@ -42,7 +44,6 @@ function exit_() {
 }
 
 git status
-git pull
 if [ "$com" = "uninstall" ]; then
     uninstall
 else
