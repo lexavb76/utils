@@ -29,6 +29,7 @@ function uninstall() {
     sudo rm  -v /usr/local/bin/nvim
     sudo rm -rv /usr/local/share/nvim/
     sudo rm -rf build
+    sudo rm -rf .deps/.ninja_log
 }
 
 function exit_() {
