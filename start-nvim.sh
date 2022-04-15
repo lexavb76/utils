@@ -12,7 +12,6 @@ function install() {
     echo '****************'
     read -p "Choose release: " rev
     [ -n "$rev" ] && git checkout $rev || exit_ 1
-    git pull
     read -p "Reinstalling your nvim. Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit_ 1
     uninstall
     #make CMAKE_BUILD_TYPE=RelWithDebInfo USE_BUNDLED=OFF && \
@@ -44,6 +43,7 @@ function exit_() {
     exit $1
 }
 
+git pull
 git status
 if [ "$com" = "uninstall" ]; then
     uninstall
