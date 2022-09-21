@@ -1,5 +1,5 @@
 #!/bin/bash
-com=$1
+com=$1 #Command: install | uninstall
 cur_ver=$(git log | head -3) # | awk '{print $2}')
 
 function install() {
