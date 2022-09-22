@@ -1,19 +1,55 @@
 #!/bin/bash
-com=$1 #Command: install | uninstall
-cur_ver=$(git log | head -3) # | awk '{print $2}')
 
-function install() {
+function main() {
+    com=$1 #Command: all | install | uninstall
+
+    cur_path=/local/work/neovim.new
+    old_path=/local/work/neovim.old
+    [ -d $old_path ] && rm -rf $old_path
+    [ -d $cur_path ] && cp -r $cur_path $old_path || git clone https://github.com/neovim/neovim.git $cur_path
+    cd $cur_path
+    cur_ver=$(git log | head -1 | awk '{print $2}') || exit_ 1
+    fetch $cur_ver
+    case "$com" in
+        all) all
+        ;;
+        install) install
+        ;;
+        uninstall) uninstall
+        ;;
+        *) echo 'Options: all | install | uninstall'
+            exit_ 1
+        ;;
+    esac
+}
+
+all ()
+{
+    uninstall
+    install
+    exit_ 0
+}
+
+fetch () #param: revision
+{
+    local rev=$1
+    git checkout master
+    git pull
+    git status
     echo '****************'
+    #git log | egrep 'NVIM v[[:digit:]]?\.[[:digit:]]?\.[[:digit:]]$' | head -n 5 | awk '{print $2}'
+    git checkout $rev
     git branch -a
     git tag --column
-    #git log | egrep 'NVIM v[[:digit:]]?\.[[:digit:]]?\.[[:digit:]]$' | head -n 5 | awk '{print $2}'
     echo '****************'
-    echo "Your current revision is: $cur_ver"
+    echo "Your current revision is: $rev"
     echo '****************'
+}
+
+function install() {
+    local rev
     read -p "Choose release: " rev
     [ -n "$rev" ] && git checkout $rev || exit_ 1
-    read -p "Reinstalling your nvim. Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit_ 1
-    uninstall
     #make CMAKE_BUILD_TYPE=RelWithDebInfo USE_BUNDLED=OFF && \
     make CMAKE_BUILD_TYPE=RelWithDebInfo && \
     sudo make install
@@ -25,29 +61,25 @@ function install() {
 }
 
 function uninstall() {
+    read -p "Uninstalling your nvim. Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit_ 1
     sudo rm  -v /usr/local/bin/nvim
     sudo rm -rv /usr/local/share/nvim/
-    sudo rm -rf build
-    sudo rm -rf .deps/.ninja_log
+    sudo rm -rf builds
+    #sudo rm -rf .deps/.ninja_log
+    sudo rm -rf .deps
 }
 
 function exit_() {
-    echo "---------------------------------------"
-    new_ver=$(git log | head -3) # | awk '{print $2}')
-    echo "Your old revision was: $cur_ver"
-    echo "Your new current revision is: $new_ver"
-    echo "---------------------------------------"
-    nvim --version
-    echo "---------------------------------------"
-    echo "Uninstall: ./start-nvim.sh uninstall"
+    local log=log.txt
+    echo "---------------------------------------" | tee $log
+    local new_ver=$(git log | head -3) # | awk '{print $2}')
+    echo "Your old revision was: $cur_ver" | tee -a $log
+    echo "Your new current revision is: $new_ver" |  tee -a $log
+    echo "---------------------------------------" |  tee -a $log
+    which nvim && nvim --version | tee -a $log
+    echo "---------------------------------------" |  tee -a $log
+    echo "Uninstall: ./start-nvim.sh uninstall" |  tee -a $log
     exit $1
 }
 
-git pull
-git status
-if [ "$com" = "uninstall" ]; then
-    uninstall
-else
-    install
-fi
-
+main $@
