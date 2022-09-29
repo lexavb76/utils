@@ -1,8 +1,31 @@
 #!/bin/bash
 
+workdir=${1:-'.'} #path to code location
+declare -a urls=(
+    "https://github.com/neovim/neovim.git" #Main neovim repository
+    "https://github.com/lexavb76/nvim-lua.git" #neovim configuration and plugins
+)
+
 function main() {
-    com=${1:-'.'} #Command: path to code location
-    fetch https://github.com/neovim/neovim.git #Main neovim repository
+    local url
+    for url in ${urls[@]}
+    do
+        local name=$(basename $url)
+        local repo_name=${name%.git}
+        local com
+        fetch "$url" || continue
+        read -p "Choose your action (install | uninstall | restore). Empty - continue with another repo -> " com
+        case "$com" in
+            uninstall) eval "echo uninstall_$repo_name $url"
+            ;;
+            install) eval "echo install_$repo_name $url"
+            ;;
+            restore) eval "echo restore_$repo_name $url"
+            ;;
+            *) echo default
+            ;;
+        esac
+    done
     exit_ $?
 }
 
@@ -14,11 +37,12 @@ fetch () #params: url [revision]
     local stat
     local name=$(basename $url)
     local repo_name=${name%.git}
-    cur_path=$(realpath $com/$repo_name)
-    old_path=$(realpath $com/${repo_name}.old)
+    local cur_path=$(realpath $workdir/$repo_name)
+    local log=$cur_path/log.txt
+    date > $log
+    echo '****************' | tee -a $log
     echo $repo_name directory: $cur_path
-    echo $repo_name backup:    $old_path
-    read -p "Pulling updates from $url. Continue? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
+    read -p "Pulling updates from $url. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
     if [[ -d $cur_path ]]; then
         pushd $cur_path
         ls -al
@@ -31,18 +55,19 @@ fetch () #params: url [revision]
         git clone $url $cur_path
     fi
     pushd $cur_path
-    git status
+    git status | tee -a $log
     git branch -a
     git tag --column
     echo '****************'
     #git log | egrep 'NVIM v[[:digit:]]?\.[[:digit:]]?\.[[:digit:]]$' | head -n 5 | awk '{print $2}'
     [ -z "$rev" ] && read -p "Choose release: (empty to continue) -> " rev
-    [ -n "$rev" ] && git checkout $rev || return 1
-    echo "Your current revision is: $rev"
-    echo '****************'
+    [ -n "$rev" ] && git checkout $rev || return 0
+    echo "Your current revision is: $rev" | tee -a $log
 }
 
-function install_nvim() {
+#neovim
+################################################################################
+function install_neovim() {
     #make CMAKE_BUILD_TYPE=RelWithDebInfo USE_BUNDLED=OFF && \
     make CMAKE_BUILD_TYPE=RelWithDebInfo && \
     sudo make install
@@ -53,9 +78,14 @@ function install_nvim() {
     fi
 }
 
-function uninstall_nvim() {
+function uninstall_neovim() { #param: URL
+    local name=$(basename $1)
+    local repo_name=${name%.git}
+    local cur_path=$(realpath $workdir/$repo_name)
+    local old_path=$(realpath $workdir/${repo_name}.old)
     local stat
-    read -p "Uninstalling your nvim. Backup here: ${old_path}. Continue? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || exit_ 1
+    echo $repo_name backup:    $old_path
+    read -p "Uninstalling your nvim. Backup here: ${old_path}. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || exit_ 1
     mkdir -p $cur_path
     rm -rf $old_path
     cp -r $cur_path $old_path
@@ -65,7 +95,10 @@ function uninstall_nvim() {
     sudo rm -rf .deps
 }
 
-function restore_nvim() {
+function restore_neovim() { #param: URL
+    local name=$(basename $1)
+    local repo_name=${name%.git}
+    local old_path=$(realpath $workdir/${repo_name}.old)
     local stat
     read -p "Restoring your nvim from ${old_path}. Continue? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || exit_ 1
     [ -f $old_path/bin_nvim ] && sudo rm -v /usr/local/bin/nvim && sudo mv $old_path/bin_nvim /usr/local/bin/nvim
@@ -73,15 +106,13 @@ function restore_nvim() {
 }
 
 function exit_() {
-    local log=log.txt
-    echo "---------------------------------------" | tee $log
-    local new_ver=$(git log | head -3) # | awk '{print $2}')
-    echo "Your old revision was: $cur_ver" | tee -a $log
-    echo "Your new current revision is: $new_ver" |  tee -a $log
+    local name=$(basename ${urls[1]})
+    local repo_name=${name%.git}
+    local cur_path=$(realpath $workdir/$repo_name)
+    local log=${cur_path}/log.txt
+    echo $log
     echo "---------------------------------------" |  tee -a $log
     which nvim && nvim --version | tee -a $log
-    echo "---------------------------------------" |  tee -a $log
-    echo "Uninstall: ./start-nvim.sh uninstall" |  tee -a $log
     exit $1
 }
 
@@ -92,4 +123,4 @@ all ()
     exit_ 0
 }
 
-main $@
+main $workdir
