@@ -1,12 +1,26 @@
 #!/bin/bash
 
 function main() {
-    com=$1 #Command: all | install | uninstall
+    com=${1-:'.'} #Command: all | install | uninstall
+    cur_path=$(realpath $com/neovim)
+    old_path=$(realpath $com/neovim.old)
+    local stat
+    echo Neovim directory: $cur_path
+    echo Neovim backup:    $old_path
+    read -p 'Continue? (y/n) -> ' stat
+    [[ $stat != 'y' && $stat != 'Y' ]] && exit_ 1
+    #[ -d $cur_path ] && cp -r $cur_path $old_path || git clone https://github.com/neovim/neovim.git $cur_path
+    if [[ -d $cur_path ]]; then
+        pushd $cur_path
+        ls -al
+        stat=$(git remote -v 2>/dev/null | grep 'neovim\.git')
+        #stat=$(git status 2>/dev/null)
+        [[ -n $stat ]] && echo $stat
+        popd
+    fi
+    exit 0
 
-    cur_path=/local/work/neovim.new
-    old_path=/local/work/neovim.old
     [ -d $old_path ] && rm -rf $old_path
-    [ -d $cur_path ] && cp -r $cur_path $old_path || git clone https://github.com/neovim/neovim.git $cur_path
     cd $cur_path
     cur_ver=$(git log | head -1 | awk '{print $2}') || exit_ 1
     fetch $cur_ver
@@ -63,7 +77,7 @@ function install() {
 function uninstall() {
     read -p "Uninstalling your nvim. Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit_ 1
     sudo rm  -v /usr/local/bin/nvim
-    sudo rm -rv /usr/local/share/nvim/
+    sudo rm -rf /usr/local/share/nvim/
     sudo rm -rf builds
     #sudo rm -rf .deps/.ninja_log
     sudo rm -rf .deps
