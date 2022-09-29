@@ -1,0 +1,21 @@
+---------------------------------------
+Your old revision was: 
+Your new current revision is: commit 82e05d48bef6a3a09d35ee363ffe5a00554df664
+Author: a.babintsev <a.babintsev@inango-systems.com>
+Date:   Thu Sep 29 14:53:24 2022 +0500
+---------------------------------------
+NVIM v0.7.2
+Build type: RelWithDebInfo
+LuaJIT 2.1.0-beta3
+Compilation: /usr/bin/cc -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -DNVIM_TS_HAS_SET_MATCH_LIMIT -DNVIM_TS_HAS_SET_ALLOCATOR -O2 -g -Og -g -Wall -Wextra -pedantic -Wno-unused-parameter -Wstrict-prototypes -std=gnu99 -Wshadow -Wconversion -Wdouble-promotion -Wmissing-noreturn -Wmissing-format-attribute -Wmissing-prototypes -Wimplicit-fallthrough -Wsuggest-attribute=pure -Wsuggest-attribute=const -Wsuggest-attribute=malloc -Wsuggest-attribute=cold -Wvla -fstack-protector-strong -fno-common -fdiagnostics-color=always -DINCLUDE_GENERATED_DECLARATIONS -D_GNU_SOURCE -DNVIM_MSGPACK_HAS_FLOAT32 -DNVIM_UNIBI_HAS_VAR_FROM -DMIN_LOG_LEVEL=3 -I/local/work/neovim.new/build/config -I/local/work/neovim.new/src -I/local/work/neovim.new/.deps/usr/include -I/usr/include -I/local/work/neovim.new/build/src/nvim/auto -I/local/work/neovim.new/build/include
+Compiled by a.babintsev@ababintsev
+
+Features: +acl +iconv +tui
+See ":help feature-compile"
+
+   system vimrc file: "$VIM/sysinit.vim"
+  fall-back for $VIM: "/usr/local/share/nvim"
+
+Run :checkhealth for more info
+---------------------------------------
+Uninstall: ./start-nvim.sh uninstall
