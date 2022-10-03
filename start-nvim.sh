@@ -33,7 +33,8 @@ fetch () #params: url [revision]
 {
     local url=$1
     [ -z $url ] && echo 'fetch needs URL parameter. Nothing to be done.' >&2 && return 1
-    local rev=$2
+    local rev_ans=${2:-HEAD}
+    local rev=$rev_ans
     local stat
     local name=$(basename $url)
     local repo_name=${name%.git}
@@ -49,7 +50,7 @@ fetch () #params: url [revision]
         stat=$(git remote -v 2>/dev/null | grep "$repo_name\.git")
         #stat=$(git status 2>/dev/null)
         [[ -z $stat ]] && echo $cur_path already exist and is not neovim repository, first do \'rm -rf $cur_path\' && return 1
-        git pull
+        git pull 2>/dev/null
         popd
     else
         git clone $url $cur_path
@@ -60,9 +61,16 @@ fetch () #params: url [revision]
     git tag --column
     echo '****************'
     #git log | egrep 'NVIM v[[:digit:]]?\.[[:digit:]]?\.[[:digit:]]$' | head -n 5 | awk '{print $2}'
-    [ -z "$rev" ] && read -p "Choose release: (empty to continue) -> " rev
-    [ -n "$rev" ] && git checkout $rev || return 0
+    stat=1
+    while [[ $stat != 0 ]]; do
+        read -p "Choose release: (<Enter> to continue with \"$rev\") -> " rev_ans
+        [ -n "$rev_ans" ] && rev=${rev_ans}
+        stat=1
+        git checkout $rev && stat=0 && rev=$(git log | head -1 | tee -a $log) || rev=HEAD
+    done
+    git pull 2>/dev/null
     echo "Your current revision is: $rev" | tee -a $log
+    git status | tee -a $log
 }
 
 #neovim
@@ -90,6 +98,7 @@ function uninstall_neovim() { #param: URL
     rm -rf $old_path
     cp -r $cur_path $old_path
     sudo mv /usr/local/bin/nvim $old_path/bin_nvim
+    [ -e $old_path/share_nvim ] && rm -rf $old_path/share_nvim
     sudo mv /usr/local/share/nvim/ $old_path/share_nvim
     sudo rm -rf builds
     sudo rm -rf .deps
