@@ -1,26 +1,25 @@
 #!/bin/bash
 
 workdir=${1:-'.'} #path to code location
-declare -a urls=(
-    "https://github.com/neovim/neovim.git" #Main neovim repository
-    "https://github.com/lexavb76/nvim-lua.git" #neovim configuration and plugins
-)
+declare -A urls
+urls['1.Main_neovim_repository']='https://github.com/neovim/neovim.git'
+urls['2.Neovim_configuration_and_plugins']='https://github.com/lexavb76/nvim-lua.git'
 
 function main() {
-    local url
-    for url in ${urls[@]}
+    local repo
+    for repo in ${!urls[*]} #Iterating through all indices
     do
-        local name=$(basename $url)
+        local name=$(basename ${urls[$repo]})
         local repo_name=${name%.git}
         local com
-        fetch "$url" || continue
+        fetch "$repo" || continue
         read -p "Choose your action (install | uninstall | restore). Empty - continue with another repo -> " com
         case "$com" in
-            uninstall) eval "echo uninstall_$repo_name $url"
+            uninstall) eval "echo uninstall_$repo_name"
             ;;
-            install) eval "echo install_$repo_name $url"
+            install) eval "echo install_$repo_name"
             ;;
-            restore) eval "echo restore_$repo_name $url"
+            restore) eval "echo restore_$repo_name"
             ;;
             *) echo default
             ;;
@@ -31,7 +30,8 @@ function main() {
 
 fetch () #params: url [revision]
 {
-    local url=$1
+    local repo=$1
+    local url=${urls[$repo]}
     [ -z $url ] && echo 'fetch needs URL parameter. Nothing to be done.' >&2 && return 1
     local rev_ans=${2:-HEAD}
     local rev=$rev_ans
@@ -41,7 +41,7 @@ fetch () #params: url [revision]
     local cur_path=$(realpath $workdir/$repo_name)
     local log=$cur_path/log.txt
     date > $log
-    echo '****************' | tee -a $log
+    echo "**************** ${repo} ****************" | tee -a $log
     echo $repo_name directory: $cur_path
     read -p "Pulling updates from $url. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
     if [[ -d $cur_path ]]; then
