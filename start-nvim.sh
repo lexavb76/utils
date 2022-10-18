@@ -1,25 +1,30 @@
 #!/bin/bash
 
 workdir=${1:-'.'} #path to code location
-declare -A urls
-urls['1.Main_neovim_repository']='https://github.com/neovim/neovim.git'
-urls['2.Neovim_configuration_and_plugins']='https://github.com/lexavb76/nvim-lua.git'
+declare -a urls=(
+    'https://github.com/neovim/neovim.git'     #Main_neovim_repository
+    'https://github.com/lexavb76/nvim-lua.git' #Neovim_configuration_and_plugins
+    'https://github.com/neovide/neovide.git'   #Neovide_GUI_for_neovim
+)
+
 
 function main() {
     local repo
-    for repo in ${!urls[*]} #Iterating through all indices
+    for repo in ${urls[*]}
     do
-        local name=$(basename ${urls[$repo]})
+        local name=$(basename $repo)
         local repo_name=${name%.git}
+        local cur_path=$(realpath $workdir/$repo_name)
+        local postfix=$(echo "$repo_name | sed 's/-/_/g'")
         local com
         fetch "$repo" || continue
         read -p "Choose your action (install | uninstall | restore). Empty - continue with another repo -> " com
         case "$com" in
-            uninstall) eval "echo uninstall_$repo_name"
+            uninstall) eval "echo uninstall_$postfix"
             ;;
-            install) eval "echo install_$repo_name"
+            install) eval "echo install_$postfix"
             ;;
-            restore) eval "echo restore_$repo_name"
+            restore) eval "echo restore_$postfix"
             ;;
             *) echo default
             ;;
@@ -30,8 +35,7 @@ function main() {
 
 fetch () #params: url [revision]
 {
-    local repo=$1
-    local url=${urls[$repo]}
+    local url=$1
     [ -z $url ] && echo 'fetch needs URL parameter. Nothing to be done.' >&2 && return 1
     local rev_ans=${2:-HEAD}
     local rev=$rev_ans
@@ -40,8 +44,7 @@ fetch () #params: url [revision]
     local repo_name=${name%.git}
     local cur_path=$(realpath $workdir/$repo_name)
     local log=$cur_path/log.txt
-    date > $log
-    echo "**************** ${repo} ****************" | tee -a $log
+    echo "**************** ${repo} ****************"
     echo $repo_name directory: $cur_path
     read -p "Pulling updates from $url. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
     if [[ -d $cur_path ]]; then
@@ -55,6 +58,7 @@ fetch () #params: url [revision]
     else
         git clone $url $cur_path
     fi
+    date > $log
     pushd $cur_path
     git status | tee -a $log
     git branch -a
@@ -115,7 +119,7 @@ function restore_neovim() { #param: URL
 }
 
 function exit_() {
-    local name=$(basename ${urls[1]})
+    local name=$(basename ${urls[0]})
     local repo_name=${name%.git}
     local cur_path=$(realpath $workdir/$repo_name)
     local log=${cur_path}/log.txt
