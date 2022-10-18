@@ -4,7 +4,7 @@ workdir=${1:-'.'} #path to code location
 declare -a urls=(
     'https://github.com/neovim/neovim.git'     #Main_neovim_repository
     'https://github.com/lexavb76/nvim-lua.git' #Neovim_configuration_and_plugins
-    'https://github.com/neovide/neovide.git'   #Neovide_GUI_for_neovim
+    #'https://github.com/neovide/neovide.git'   #Neovide_GUI_for_neovim (strange behaviour with keymappings)
 )
 
 
@@ -15,16 +15,21 @@ function main() {
         local name=$(basename $repo)
         local repo_name=${name%.git}
         local cur_path=$(realpath $workdir/$repo_name)
-        local postfix=$(echo "$repo_name | sed 's/-/_/g'")
+        local postfix=$(echo "$repo_name" | sed 's/-/_/g')
         local com
-        fetch "$repo" || continue
+        local stat
+        log=$cur_path/log.txt
+        echo "**************** ${repo} ****************"
+        echo $repo_name directory: $cur_path
+        read -p "Pulling updates from $repo. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || continue
+        fetch "$repo_name" || continue
         read -p "Choose your action (install | uninstall | restore). Empty - continue with another repo -> " com
         case "$com" in
-            uninstall) eval "echo uninstall_$postfix"
+            uninstall) eval "echo uninstall_$postfix $repo_name"
             ;;
-            install) eval "echo install_$postfix"
+            install) eval "install_$postfix $repo_name"
             ;;
-            restore) eval "echo restore_$postfix"
+            restore) eval "echo restore_$postfix $repo_name"
             ;;
             *) echo default
             ;;
@@ -33,25 +38,18 @@ function main() {
     exit_ $?
 }
 
-fetch () #params: url [revision]
+fetch () #params: repo_name [revision]
 {
-    local url=$1
-    [ -z $url ] && echo 'fetch needs URL parameter. Nothing to be done.' >&2 && return 1
+    local repo_name=$1
+    [ -z "$repo_name" ] && echo 'fetch needs repo_name parameter. Nothing to be done.' >&2 && return 1
     local rev_ans=${2:-HEAD}
     local rev=$rev_ans
     local stat
-    local name=$(basename $url)
-    local repo_name=${name%.git}
     local cur_path=$(realpath $workdir/$repo_name)
-    local log=$cur_path/log.txt
-    echo "**************** ${repo} ****************"
-    echo $repo_name directory: $cur_path
-    read -p "Pulling updates from $url. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
     if [[ -d $cur_path ]]; then
         pushd $cur_path
         ls -al
         stat=$(git remote -v 2>/dev/null | grep "$repo_name\.git")
-        #stat=$(git status 2>/dev/null)
         [[ -z $stat ]] && echo $cur_path already exist and is not neovim repository, first do \'rm -rf $cur_path\' && return 1
         git pull 2>/dev/null
         popd
@@ -75,11 +73,15 @@ fetch () #params: url [revision]
     git pull 2>/dev/null
     echo "Your current revision is: $rev" | tee -a $log
     git status | tee -a $log
+    popd
 }
 
 #neovim
 ################################################################################
-function install_neovim() {
+function install_neovim() { #param: repo_name
+    local repo_name=$1
+    local cur_path=$(realpath $workdir/$repo_name)
+    pushd $cur_path
     #make CMAKE_BUILD_TYPE=RelWithDebInfo USE_BUNDLED=OFF && \
     make CMAKE_BUILD_TYPE=RelWithDebInfo && \
     sudo make install
@@ -88,11 +90,11 @@ function install_neovim() {
         sudo mv /usr/local/bin/nvim.bak/nvim /usr/local/bin/
         sudo rm -rf /usr/local/bin/nvim.bak
     fi
+    popd
 }
 
-function uninstall_neovim() { #param: URL
-    local name=$(basename $1)
-    local repo_name=${name%.git}
+function uninstall_neovim() { #param: repo_name
+    local repo_name=$1
     local cur_path=$(realpath $workdir/$repo_name)
     local old_path=$(realpath $workdir/${repo_name}.old)
     local stat
@@ -108,9 +110,8 @@ function uninstall_neovim() { #param: URL
     sudo rm -rf .deps
 }
 
-function restore_neovim() { #param: URL
-    local name=$(basename $1)
-    local repo_name=${name%.git}
+function restore_neovim() { #param: repo_name
+    local repo_name=$1
     local old_path=$(realpath $workdir/${repo_name}.old)
     local stat
     read -p "Restoring your nvim from ${old_path}. Continue? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || exit_ 1
@@ -118,7 +119,29 @@ function restore_neovim() { #param: URL
     [ -d $old_path/share_nvim ] && sudo rm -rf /usr/local/share/nvim/ && sudo mv $old_path/share_nvim /usr/local/share/nvim/
 }
 
-function exit_() {
+#neovide GUI
+################################################################################
+install_neovide () #param: repo_name
+{
+    local repo_name=$1
+    local cur_path=$(realpath $workdir/$repo_name)
+    curl --proto '=https' --tlsv1.2 -sSf "https://sh.rustup.rs" | sh && source "$HOME/.cargo/env" #Install Rust
+    pushd $cur_path
+    cargo install --path $cur_path || cat 1>&2 <<EOF
+
+Check all these packages are installed:
+"sudo apt install -y curl \
+gnupg ca-certificates git \
+gcc-multilib g++-multilib cmake libssl-dev pkg-config \
+libfreetype6-dev libasound2-dev libexpat1-dev libxcb-composite0-dev \
+libbz2-dev libsndio-dev freeglut3-dev libxmu-dev libxi-dev libfontconfig1-dev"
+
+EOF
+
+    popd
+}
+
+exit_() {
     local name=$(basename ${urls[0]})
     local repo_name=${name%.git}
     local cur_path=$(realpath $workdir/$repo_name)
