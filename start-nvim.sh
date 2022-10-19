@@ -2,13 +2,15 @@
 
 workdir=${1:-'.'} #path to code location
 declare -a urls=(
-    'https://github.com/neovim/neovim.git'     #Main_neovim_repository
-    'https://github.com/lexavb76/nvim-lua.git' #Neovim_configuration_and_plugins
-    #'https://github.com/neovide/neovide.git'   #Neovide_GUI_for_neovim (strange behaviour with keymappings)
+    'https://github.com/neovim/neovim.git'            #Main_neovim_repository
+    'https://github.com/lexavb76/nvim-lua.git'        #Neovim_configuration_and_plugins
+    'https://github.com/equalsraf/neovim-qt.git'      #Qt based GUI for neovim
+    #'https://github.com/neovide/neovide.git'          #Neovide_GUI_for_neovim (strange behaviour with keymappings)
 )
 
 
-function main() {
+main()
+{
     local repo
     for repo in ${urls[*]}
     do
@@ -27,7 +29,7 @@ function main() {
         case "$com" in
             uninstall) eval "echo uninstall_$postfix $repo_name"
             ;;
-            install) eval "install_$postfix $repo_name"
+            install) eval "uninstall_$postfix $repo_name && install_$postfix $repo_name"
             ;;
             restore) eval "echo restore_$postfix $repo_name"
             ;;
@@ -78,7 +80,8 @@ fetch () #params: repo_name [revision]
 
 #neovim
 ################################################################################
-function install_neovim() { #param: repo_name
+install_neovim()
+{ #param: repo_name
     local repo_name=$1
     local cur_path=$(realpath $workdir/$repo_name)
     pushd $cur_path
@@ -91,15 +94,19 @@ function install_neovim() { #param: repo_name
         sudo rm -rf /usr/local/bin/nvim.bak
     fi
     popd
+    command -v nvim 1>&2>/dev/null || return 1
+    echo "Start neovim: nvim" | tee -a $log
 }
 
-function uninstall_neovim() { #param: repo_name
+uninstall_neovim()
+{ #param: repo_name
     local repo_name=$1
     local cur_path=$(realpath $workdir/$repo_name)
     local old_path=$(realpath $workdir/${repo_name}.old)
     local stat
+    command -v nvim 1>&2>/dev/null || return 0
     echo $repo_name backup:    $old_path
-    read -p "Uninstalling your nvim. Backup here: ${old_path}. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || exit_ 1
+    read -p "Uninstalling your nvim. Backup here: ${old_path}. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
     mkdir -p $cur_path
     rm -rf $old_path
     cp -r $cur_path $old_path
@@ -110,13 +117,58 @@ function uninstall_neovim() { #param: repo_name
     sudo rm -rf .deps
 }
 
-function restore_neovim() { #param: repo_name
+restore_neovim()
+{ #param: repo_name
     local repo_name=$1
     local old_path=$(realpath $workdir/${repo_name}.old)
     local stat
-    read -p "Restoring your nvim from ${old_path}. Continue? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || exit_ 1
+    read -p "Restoring your nvim from ${old_path}. Continue? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
     [ -f $old_path/bin_nvim ] && sudo rm -v /usr/local/bin/nvim && sudo mv $old_path/bin_nvim /usr/local/bin/nvim
     [ -d $old_path/share_nvim ] && sudo rm -rf /usr/local/share/nvim/ && sudo mv $old_path/share_nvim /usr/local/share/nvim/
+}
+
+#nvim-lua
+################################################################################
+install_nvim_lua()
+{ #param: repo_name
+    local repo_name=$1
+    local cur_path=$(realpath $workdir/$repo_name)
+    ln -sv $cur_path $HOME/.config/nvim
+}
+
+uninstall_nvim_lua()
+{ #param: repo_name
+    local repo_name=$1
+    local cur_path=$(realpath $workdir/$repo_name)
+    local nvim_conf=$HOME/.config/nvim
+    if [ -e $nvim_conf ]; then
+        read -p "$nvim_conf exists. Do you really want to remove it? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
+        rm -rf $nvim_conf || return 1
+    fi
+}
+
+#neovim-qt
+################################################################################
+install_neovim_qt()
+{ #param: repo_name
+    local repo_name=$1
+    local cur_path=$(realpath $workdir/$repo_name)
+    pushd $cur_path
+    mkdir -p build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Release .. && make || return 1
+    echo "Start GUI: nvim-qt" | tee -a $log
+    popd
+}
+
+uninstall_neovim_qt()
+{ #param: repo_name
+    local repo_name=$1
+    local cur_path=$(realpath $workdir/$repo_name)
+    if command -v nvim-qt >/dev/null; then
+        read -p "Uninstalling your neovim-qt GUI. Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || return 1
+        sudo xargs rm -v < $cur_path/build/install_manifest.txt
+    fi
 }
 
 #neovide GUI
@@ -141,6 +193,8 @@ EOF
     popd
 }
 
+################################################################################
+################################################################################
 exit_() {
     local name=$(basename ${urls[0]})
     local repo_name=${name%.git}

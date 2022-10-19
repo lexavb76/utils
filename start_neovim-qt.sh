@@ -2,7 +2,7 @@
 com=$1
 rev=$2
 
-function update() {
+update() {
     stat=$(git status)
     echo "$stat"
     if ! echo "$stat" | grep "Your branch is up to date with 'origin/master'" > /dev/null; then
@@ -10,7 +10,7 @@ function update() {
     fi
 }
 
-function install() {
+install() {
     read -p "Reinstalling your nvim. Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
     git pull
     [ -n "$rev" ] && git checkout $rev
@@ -21,7 +21,7 @@ function install() {
     make
 }
 
-function uninstall() {
+uninstall() {
     sudo xargs rm -v < build/install_manifest.txt
 }
 
