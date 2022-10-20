@@ -1,11 +1,13 @@
 #!/bin/bash
 
 workdir=${1:-'.'} #path to code location
+workdir=$workdir/nvim
 declare -a urls=(
     'https://github.com/neovim/neovim.git'            #Main_neovim_repository
     'https://github.com/lexavb76/nvim-lua.git'        #Neovim_configuration_and_plugins
     'https://github.com/equalsraf/neovim-qt.git'      #Qt based GUI for neovim
     #'https://github.com/neovide/neovide.git'          #Neovide_GUI_for_neovim (strange behaviour with keymappings)
+    'https://github.com/ryanoasis/nerd-fonts'         #Hack nerd-fonts family is needed
 )
 
 
@@ -134,6 +136,11 @@ install_nvim_lua()
     local repo_name=$1
     local cur_path=$(realpath $workdir/$repo_name)
     ln -sv $cur_path $HOME/.config/nvim
+    mkdir -p $workdir/share
+    ln -sv $workdir/share $HOME/.local/share/nvim
+    #TODO:
+    #Set link to $workdir/share
+    #Elaborate work directories tree scheme
 }
 
 uninstall_nvim_lua()
