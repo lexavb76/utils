@@ -1,7 +1,8 @@
 #!/bin/bash
 
 workdir=${1:-'.'} #path to code location
-workdir=$workdir/nvim
+workdir=$(realpath $workdir/nvim)
+mkdir -p $workdir
 declare -a urls=(
     'https://github.com/neovim/neovim.git'            #Main_neovim_repository
     'https://github.com/lexavb76/nvim-lua.git'        #Neovim_configuration_and_plugins
@@ -13,10 +14,10 @@ declare -a urls=(
 
 main()
 {
-    local repo
-    for repo in ${urls[*]}
+    local url
+    for url in ${urls[*]}
     do
-        local name=$(basename $repo)
+        local name=$(basename $url)
         local repo_name=${name%.git}
         local cur_path=$(realpath $workdir/$repo_name)
         local postfix=$(echo "$repo_name" | sed 's/-/_/g')
@@ -26,10 +27,10 @@ main()
         echo "**************** ${repo} ****************"
         echo $repo_name directory: $cur_path
         read -p "Pulling updates from $repo. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || continue
-        fetch "$repo_name" || continue
+        fetch "$url" || continue
         read -p "Choose your action (install | uninstall | restore). Empty - continue with another repo -> " com
         case "$com" in
-            uninstall) eval "echo uninstall_$postfix $repo_name"
+            uninstall) eval "uninstall_$postfix $repo_name"
             ;;
             install) eval "uninstall_$postfix $repo_name && install_$postfix $repo_name"
             ;;
@@ -42,9 +43,11 @@ main()
     exit_ $?
 }
 
-fetch () #params: repo_name [revision]
+fetch () #params: url [revision]
 {
-    local repo_name=$1
+    local url=$1
+    local name=$(basename $url)
+    local repo_name=${name%.git}
     [ -z "$repo_name" ] && echo 'fetch needs repo_name parameter. Nothing to be done.' >&2 && return 1
     local rev_ans=${2:-HEAD}
     local rev=$rev_ans
@@ -86,6 +89,7 @@ install_neovim()
 { #param: repo_name
     local repo_name=$1
     local cur_path=$(realpath $workdir/$repo_name)
+    local nvim_share=$HOME/.local/share/nvim
     pushd $cur_path
     #make CMAKE_BUILD_TYPE=RelWithDebInfo USE_BUNDLED=OFF && \
     make CMAKE_BUILD_TYPE=RelWithDebInfo && \
@@ -95,6 +99,8 @@ install_neovim()
         sudo mv /usr/local/bin/nvim.bak/nvim /usr/local/bin/
         sudo rm -rf /usr/local/bin/nvim.bak
     fi
+    mkdir -p $workdir/share
+    ln -sv $workdir/share $nvim_share
     popd
     command -v nvim 1>&2>/dev/null || return 1
     echo "Start neovim: nvim" | tee -a $log
@@ -105,6 +111,7 @@ uninstall_neovim()
     local repo_name=$1
     local cur_path=$(realpath $workdir/$repo_name)
     local old_path=$(realpath $workdir/${repo_name}.old)
+    local nvim_share=$HOME/.local/share/nvim
     local stat
     command -v nvim 1>&2>/dev/null || return 0
     echo $repo_name backup:    $old_path
@@ -117,6 +124,7 @@ uninstall_neovim()
     sudo mv /usr/local/share/nvim/ $old_path/share_nvim
     sudo rm -rf builds
     sudo rm -rf .deps
+    rm -rf $nvim_share
 }
 
 restore_neovim()
@@ -135,12 +143,9 @@ install_nvim_lua()
 { #param: repo_name
     local repo_name=$1
     local cur_path=$(realpath $workdir/$repo_name)
-    ln -sv $cur_path $HOME/.config/nvim
-    mkdir -p $workdir/share
-    ln -sv $workdir/share $HOME/.local/share/nvim
-    #TODO:
-    #Set link to $workdir/share
-    #Elaborate work directories tree scheme
+    local nvim_conf=$HOME/.config/nvim
+    local nvim_share=$HOME/.local/share/nvim
+    ln -sv $cur_path $nvim_conf
 }
 
 uninstall_nvim_lua()
@@ -149,7 +154,7 @@ uninstall_nvim_lua()
     local cur_path=$(realpath $workdir/$repo_name)
     local nvim_conf=$HOME/.config/nvim
     if [ -e $nvim_conf ]; then
-        read -p "$nvim_conf exists. Do you really want to remove it? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
+        read -p "$nvim_conf already exists. Do you really want to remove it? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
         rm -rf $nvim_conf || return 1
     fi
 }
@@ -197,6 +202,41 @@ libbz2-dev libsndio-dev freeglut3-dev libxmu-dev libxi-dev libfontconfig1-dev"
 
 EOF
 
+    popd
+}
+
+#nerd-fonts
+################################################################################
+install_nerd_fonts()
+{ #param: repo_name
+    local repo_name=$1
+    local cur_path=$(realpath $workdir/$repo_name)
+    local font_location="$HOME/.local/share/fonts"
+    local font_family='Hack'
+    local answer
+    pushd $cur_path
+    pushd patched-fonts
+    ls
+    popd
+    read -p "Choose font families from the list, separated by Space ('Hack' by default | 'all' for all fonts) -> " answer && [ -z "$answer" ] || font_family=$answer
+    echo Font families: "$font_family"
+    sleep 5
+    [[ "$font_family" == [aA][lL][lL] ]] && font_family=''
+    mkdir -p $font_location && ./install.sh --link $font_family
+    popd
+}
+
+uninstall_nerd_fonts()
+{ #param: repo_name
+    local repo_name=$1
+    local cur_path=$(realpath $workdir/$repo_name)
+    local font_location="$HOME/.local/share/fonts"
+    local confirm
+    pushd $cur_path
+    fc-list | grep Nerd | sort -u
+    echo These Nerd fonts are installed on your system
+    read -p "Do you want to remove all Nerd Fonts (y/n) -> " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || return 0
+    ./install.sh --remove
     popd
 }
 
