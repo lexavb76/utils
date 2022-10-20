@@ -90,6 +90,8 @@ install_neovim()
     local repo_name=$1
     local cur_path=$(realpath $WORKDIR/$repo_name)
     local nvim_share=$HOME/.local/share/nvim
+    command -v apt 1>&2>/dev/null || cmd='echo Install with your packet manager: '
+    $cmd cmake build-essential | tee -a $LOG
     pushd $cur_path
     #make CMAKE_BUILD_TYPE=RelWithDebInfo USE_BUNDLED=OFF && \
     make CMAKE_BUILD_TYPE=RelWithDebInfo && \
@@ -169,7 +171,8 @@ install_neovim_qt()
     command -v apt 1>&2>/dev/null || cmd='echo Install with your packet manager: '
     $cmd cmake build-essential qt5-qmake qt5-qmake-bin qtbase5-dev \
     qtbase5-dev-tools libqt5svg5-dev qtchooser libqt5concurrent5 libqt5core5a libqt5dbus5 \
-    libqt5gui5 libqt5network5 libqt5widgets5 libqt5xml5
+    libqt5gui5 libqt5network5 libqt5widgets5 libqt5xml5 | tee -a $LOG
+    command -v nvim 1>&2>/dev/null || install_neovim $repo_name || return 1
     pushd $cur_path
     mkdir -p build
     pushd build
