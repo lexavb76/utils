@@ -172,8 +172,9 @@ install_neovim_qt()
     libqt5gui5 libqt5network5 libqt5widgets5 libqt5xml5
     pushd $cur_path
     mkdir -p build
-    cd build
+    pushd build
     cmake -DCMAKE_BUILD_TYPE=Release .. && make || return 1
+    popd
     echo "Start GUI: nvim-qt" | tee -a $LOG
     popd
 }
@@ -224,8 +225,7 @@ install_nerd_fonts()
     ls
     popd
     read -p "Choose font families from the list, separated by Space ('Hack' by default | 'all' for all fonts) -> " answer && [ -z "$answer" ] || font_family=$answer
-    echo Font families: "$font_family"
-    sleep 5
+    echo Nerd Font families to be installed: "$font_family" | tee -a $LOG
     [[ "$font_family" == [aA][lL][lL] ]] && font_family=''
     mkdir -p $font_location && ./install.sh --link $font_family
     popd
