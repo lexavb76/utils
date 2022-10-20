@@ -1,8 +1,8 @@
 #!/bin/bash
 
-workdir=${1:-'.'} #path to code location
-workdir=$(realpath $workdir/nvim)
-mkdir -p $workdir
+WORKDIR=${1:-'.'} #path to code location
+WORKDIR=$(realpath $WORKDIR/nvim)
+mkdir -p $WORKDIR
 declare -a urls=(
     'https://github.com/neovim/neovim.git'            #Main_neovim_repository
     'https://github.com/lexavb76/nvim-lua.git'        #Neovim_configuration_and_plugins
@@ -19,11 +19,11 @@ main()
     do
         local name=$(basename $url)
         local repo_name=${name%.git}
-        local cur_path=$(realpath $workdir/$repo_name)
+        local cur_path=$(realpath $WORKDIR/$repo_name)
         local postfix=$(echo "$repo_name" | sed 's/-/_/g')
         local com
         local stat
-        log=$cur_path/log.txt
+        LOG=$cur_path/log.txt
         echo "**************** ${repo} ****************"
         echo $repo_name directory: $cur_path
         read -p "Pulling updates from $url. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || continue
@@ -52,7 +52,7 @@ fetch () #params: url [revision]
     local rev_ans=${2:-HEAD}
     local rev=$rev_ans
     local stat
-    local cur_path=$(realpath $workdir/$repo_name)
+    local cur_path=$(realpath $WORKDIR/$repo_name)
     if [[ -d $cur_path ]]; then
         pushd $cur_path
         ls -al
@@ -63,9 +63,9 @@ fetch () #params: url [revision]
     else
         git clone $url $cur_path
     fi
-    date > $log
+    date > $LOG
     pushd $cur_path
-    git status | tee -a $log
+    git status | tee -a $LOG
     git branch -a
     git tag --column
     echo '****************'
@@ -75,11 +75,11 @@ fetch () #params: url [revision]
         read -p "Choose release: (<Enter> to continue with \"$rev\") -> " rev_ans
         [ -n "$rev_ans" ] && rev=${rev_ans}
         stat=1
-        git checkout $rev && stat=0 && rev=$(git log | head -1 | tee -a $log) || rev=HEAD
+        git checkout $rev && stat=0 && rev=$(git log | head -1 | tee -a $LOG) || rev=HEAD
     done
     git pull 2>/dev/null
-    echo "Your current revision is: $rev" | tee -a $log
-    git status | tee -a $log
+    echo "Your current revision is: $rev" | tee -a $LOG
+    git status | tee -a $LOG
     popd
 }
 
@@ -88,7 +88,7 @@ fetch () #params: url [revision]
 install_neovim()
 { #param: repo_name
     local repo_name=$1
-    local cur_path=$(realpath $workdir/$repo_name)
+    local cur_path=$(realpath $WORKDIR/$repo_name)
     local nvim_share=$HOME/.local/share/nvim
     pushd $cur_path
     #make CMAKE_BUILD_TYPE=RelWithDebInfo USE_BUNDLED=OFF && \
@@ -99,18 +99,18 @@ install_neovim()
         sudo mv /usr/local/bin/nvim.bak/nvim /usr/local/bin/
         sudo rm -rf /usr/local/bin/nvim.bak
     fi
-    mkdir -p $workdir/share
-    ln -sv $workdir/share $nvim_share
+    mkdir -p $WORKDIR/share
+    ln -sv $WORKDIR/share $nvim_share
     popd
     command -v nvim 1>&2>/dev/null || return 1
-    echo "Start neovim: nvim" | tee -a $log
+    echo "Start neovim: nvim" | tee -a $LOG
 }
 
 uninstall_neovim()
 { #param: repo_name
     local repo_name=$1
-    local cur_path=$(realpath $workdir/$repo_name)
-    local old_path=$(realpath $workdir/${repo_name}.old)
+    local cur_path=$(realpath $WORKDIR/$repo_name)
+    local old_path=$(realpath $WORKDIR/${repo_name}.old)
     local nvim_share=$HOME/.local/share/nvim
     local stat
     command -v nvim 1>&2>/dev/null || return 0
@@ -130,7 +130,7 @@ uninstall_neovim()
 restore_neovim()
 { #param: repo_name
     local repo_name=$1
-    local old_path=$(realpath $workdir/${repo_name}.old)
+    local old_path=$(realpath $WORKDIR/${repo_name}.old)
     local stat
     read -p "Restoring your nvim from ${old_path}. Continue? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
     [ -f $old_path/bin_nvim ] && sudo rm -v /usr/local/bin/nvim && sudo mv $old_path/bin_nvim /usr/local/bin/nvim
@@ -142,7 +142,7 @@ restore_neovim()
 install_nvim_lua()
 { #param: repo_name
     local repo_name=$1
-    local cur_path=$(realpath $workdir/$repo_name)
+    local cur_path=$(realpath $WORKDIR/$repo_name)
     local nvim_conf=$HOME/.config/nvim
     local nvim_share=$HOME/.local/share/nvim
     ln -sv $cur_path $nvim_conf
@@ -151,7 +151,7 @@ install_nvim_lua()
 uninstall_nvim_lua()
 { #param: repo_name
     local repo_name=$1
-    local cur_path=$(realpath $workdir/$repo_name)
+    local cur_path=$(realpath $WORKDIR/$repo_name)
     local nvim_conf=$HOME/.config/nvim
     if [ -e $nvim_conf ]; then
         read -p "$nvim_conf already exists. Do you really want to remove it? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
@@ -164,7 +164,7 @@ uninstall_nvim_lua()
 install_neovim_qt()
 { #param: repo_name
     local repo_name=$1
-    local cur_path=$(realpath $workdir/$repo_name)
+    local cur_path=$(realpath $WORKDIR/$repo_name)
     local cmd='sudo apt install -y'
     command -v apt 1>&2>/dev/null || cmd='echo Install with your packet manager: '
     $cmd cmake build-essential qt5-qmake qt5-qmake-bin qtbase5-dev \
@@ -174,14 +174,14 @@ install_neovim_qt()
     mkdir -p build
     cd build
     cmake -DCMAKE_BUILD_TYPE=Release .. && make || return 1
-    echo "Start GUI: nvim-qt" | tee -a $log
+    echo "Start GUI: nvim-qt" | tee -a $LOG
     popd
 }
 
 uninstall_neovim_qt()
 { #param: repo_name
     local repo_name=$1
-    local cur_path=$(realpath $workdir/$repo_name)
+    local cur_path=$(realpath $WORKDIR/$repo_name)
     if command -v nvim-qt 1>&2>/dev/null; then
         read -p "Uninstalling your neovim-qt GUI. Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || return 1
         sudo xargs rm -v < $cur_path/build/install_manifest.txt
@@ -193,7 +193,7 @@ uninstall_neovim_qt()
 install_neovide () #param: repo_name
 {
     local repo_name=$1
-    local cur_path=$(realpath $workdir/$repo_name)
+    local cur_path=$(realpath $WORKDIR/$repo_name)
     curl --proto '=https' --tlsv1.2 -sSf "https://sh.rustup.rs" | sh && source "$HOME/.cargo/env" #Install Rust
     pushd $cur_path
     cargo install --path $cur_path || cat 1>&2 <<EOF
@@ -215,7 +215,7 @@ EOF
 install_nerd_fonts()
 { #param: repo_name
     local repo_name=$1
-    local cur_path=$(realpath $workdir/$repo_name)
+    local cur_path=$(realpath $WORKDIR/$repo_name)
     local font_location="$HOME/.local/share/fonts"
     local font_family='Hack'
     local answer
@@ -234,7 +234,7 @@ install_nerd_fonts()
 uninstall_nerd_fonts()
 { #param: repo_name
     local repo_name=$1
-    local cur_path=$(realpath $workdir/$repo_name)
+    local cur_path=$(realpath $WORKDIR/$repo_name)
     local font_location="$HOME/.local/share/fonts"
     local confirm
     pushd $cur_path
@@ -250,7 +250,7 @@ uninstall_nerd_fonts()
 exit_() {
     local name=$(basename ${urls[0]})
     local repo_name=${name%.git}
-    local cur_path=$(realpath $workdir/$repo_name)
+    local cur_path=$(realpath $WORKDIR/$repo_name)
     local log=${cur_path}/log.txt
     echo $log
     echo "---------------------------------------" |  tee -a $log
@@ -258,11 +258,4 @@ exit_() {
     exit $1
 }
 
-all ()
-{
-    uninstall
-    install
-    exit_ 0
-}
-
-main $workdir
+main $WORKDIR
