@@ -26,7 +26,7 @@ main()
         log=$cur_path/log.txt
         echo "**************** ${repo} ****************"
         echo $repo_name directory: $cur_path
-        read -p "Pulling updates from $repo. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || continue
+        read -p "Pulling updates from $url. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || continue
         fetch "$url" || continue
         read -p "Choose your action (install | uninstall | restore). Empty - continue with another repo -> " com
         case "$com" in
@@ -165,6 +165,11 @@ install_neovim_qt()
 { #param: repo_name
     local repo_name=$1
     local cur_path=$(realpath $workdir/$repo_name)
+    local cmd='sudo apt install -y'
+    command -v apt 1>&2>/dev/null || cmd='echo Install with your packet manager: '
+    $cmd cmake build-essential qt5-qmake qt5-qmake-bin qtbase5-dev \
+    qtbase5-dev-tools libqt5svg5-dev qtchooser libqt5concurrent5 libqt5core5a libqt5dbus5 \
+    libqt5gui5 libqt5network5 libqt5widgets5 libqt5xml5
     pushd $cur_path
     mkdir -p build
     cd build
@@ -177,7 +182,7 @@ uninstall_neovim_qt()
 { #param: repo_name
     local repo_name=$1
     local cur_path=$(realpath $workdir/$repo_name)
-    if command -v nvim-qt >/dev/null; then
+    if command -v nvim-qt 1>&2>/dev/null; then
         read -p "Uninstalling your neovim-qt GUI. Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || return 1
         sudo xargs rm -v < $cur_path/build/install_manifest.txt
     fi
