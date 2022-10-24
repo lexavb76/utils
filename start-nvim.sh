@@ -128,8 +128,8 @@ uninstall_neovim()
     sudo mv /usr/local/bin/nvim $old_path/bin_nvim
     [ -e $old_path/share_nvim ] && rm -rf $old_path/share_nvim
     sudo mv /usr/local/share/nvim/ $old_path/share_nvim
-    sudo rm -rf builds
-    sudo rm -rf .deps
+    sudo rm -rf $cur_path/builds
+    sudo rm -rf $cur_path/.deps
     rm -rf $nvim_share
 }
 
