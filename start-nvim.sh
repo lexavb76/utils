@@ -91,6 +91,7 @@ install_neovim()
     local repo_name=$1
     local cur_path=$(realpath $WORKDIR/$repo_name)
     local nvim_share=$HOME/.local/share/nvim
+    local cmd='sudo apt install -y'
     command -v apt 1>&2>/dev/null || cmd='echo Install with your packet manager: '
     $cmd cmake build-essential | tee -a $LOG
     pushd $cur_path
@@ -116,9 +117,10 @@ uninstall_neovim()
     local old_path=$(realpath $WORKDIR/${repo_name}.old)
     local nvim_share=$HOME/.local/share/nvim
     local stat
-    command -v nvim 1>&2>/dev/null || return 0
     echo $repo_name backup:    $old_path
-    read -p "Uninstalling your nvim. Backup here: ${old_path}. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
+    if command -v nvim 1>&2>/dev/null; then
+        read -p "Uninstalling your nvim. Backup here: ${old_path}. Continue? (Y/N): -> " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
+    fi
     mkdir -p $cur_path
     rm -rf $old_path
     cp -r $cur_path $old_path
