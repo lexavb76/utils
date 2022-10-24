@@ -92,8 +92,9 @@ install_neovim()
     local cur_path=$(realpath $WORKDIR/$repo_name)
     local nvim_share=$HOME/.local/share/nvim
     local cmd='sudo apt install -y'
+    local deps='ninja-build gettext libtool libtool-bin autoconf automake cmake g++ pkg-config unzip curl doxygen'
     command -v apt 1>&2>/dev/null || cmd='echo Install with your packet manager: '
-    $cmd cmake build-essential | tee -a $LOG
+    $cmd $deps | tee -a $LOG
     pushd $cur_path
     #make CMAKE_BUILD_TYPE=RelWithDebInfo USE_BUNDLED=OFF && \
     make CMAKE_BUILD_TYPE=RelWithDebInfo && \
