@@ -159,6 +159,9 @@ uninstall_nvim_lua()
     local repo_name=$1
     local cur_path=$(realpath $WORKDIR/$repo_name)
     local nvim_conf=$HOME/.config/nvim
+    local cmd='sudo apt install -y'
+    command -v apt 1>&2>/dev/null || cmd='echo Install with your packet manager: '
+    $cmd lua-socket
     if [ -e $nvim_conf ]; then
         read -p "$nvim_conf already exists. Do you really want to remove it? (Y/N): " stat && [[ $stat == [yY] || $stat == [yY][eE][sS] ]] || return 1
         rm -rf $nvim_conf || return 1
