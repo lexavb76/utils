@@ -3,7 +3,9 @@ set -e -x
 
 WORKDIR=${1:-'.'} #path to code location
 WORKDIR=$(realpath $WORKDIR/nvim)
-mkdir -p $WORKDIR
+nvim_share=$HOME/.local/share/nvim
+mkdir -p $WORKDIR/share
+ln -svf $WORKDIR/share $nvim_share
 declare -a urls=(
     'https://github.com/neovim/neovim.git'            #Main_neovim_repository
     'https://github.com/lexavb76/nvim-lua.git'        #Neovim_configuration_and_plugins
@@ -91,7 +93,6 @@ install_neovim()
 { #param: repo_name
     local repo_name=$1
     local cur_path=$(realpath $WORKDIR/$repo_name)
-    local nvim_share=$HOME/.local/share/nvim
     local cmd='sudo apt install -y'
     local deps='ninja-build gettext libtool libtool-bin autoconf automake cmake g++ pkg-config unzip curl doxygen'
     command -v apt 1>&2>/dev/null || cmd='echo Install with your packet manager: '
@@ -105,8 +106,6 @@ install_neovim()
         sudo mv /usr/local/bin/nvim.bak/nvim /usr/local/bin/
         sudo rm -rf /usr/local/bin/nvim.bak
     fi
-    mkdir -p $WORKDIR/share
-    ln -svf $WORKDIR/share $nvim_share
     popd
     command -v nvim 1>&2>/dev/null || return 1
     echo "Start neovim: nvim" | tee -a $LOG
@@ -117,7 +116,6 @@ uninstall_neovim()
     local repo_name=$1
     local cur_path=$(realpath $WORKDIR/$repo_name)
     local old_path=$(realpath $WORKDIR/${repo_name}.old)
-    local nvim_share=$HOME/.local/share/nvim
     local stat
     echo $repo_name backup:    $old_path
     if command -v nvim 1>&2>/dev/null; then
@@ -151,7 +149,6 @@ install_nvim_lua()
     local repo_name=$1
     local cur_path=$(realpath $WORKDIR/$repo_name)
     local nvim_conf=$HOME/.config/nvim
-    local nvim_share=$HOME/.local/share/nvim
     local cmd='sudo apt install -y'
     command -v apt 1>&2>/dev/null || cmd='echo Install with your packet manager: '
     $cmd lua-socket ripgrep nodejs npm
