@@ -151,7 +151,7 @@ install_nvim_lua()
     local nvim_conf=$HOME/.config/nvim
     local cmd='sudo apt install -y'
     command -v apt 1>&2>/dev/null || cmd='echo Install with your packet manager: '
-    $cmd lua-socket ripgrep nodejs npm
+    $cmd lua-socket ripgrep nodejs npm fd-find
     ln -svf $cur_path $nvim_conf
 }
 
