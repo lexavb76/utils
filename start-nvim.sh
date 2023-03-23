@@ -106,7 +106,7 @@ install_neovim()
         sudo rm -rf /usr/local/bin/nvim.bak
     fi
     mkdir -p $WORKDIR/share
-    ln -sv $WORKDIR/share $nvim_share
+    ln -svf $WORKDIR/share $nvim_share
     popd
     command -v nvim 1>&2>/dev/null || return 1
     echo "Start neovim: nvim" | tee -a $LOG
@@ -155,7 +155,7 @@ install_nvim_lua()
     local cmd='sudo apt install -y'
     command -v apt 1>&2>/dev/null || cmd='echo Install with your packet manager: '
     $cmd lua-socket
-    ln -sv $cur_path $nvim_conf
+    ln -svf $cur_path $nvim_conf
 }
 
 uninstall_nvim_lua()
